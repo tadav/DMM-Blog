@@ -1,0 +1,37 @@
+name: Generate Articles JSON
+
+on:
+  push:
+    paths:
+      - 'articles/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Generate articles.json
+        run: |
+          echo "[" > articles.json
+          first=true
+          for file in articles/*.html; do
+            filename=$(basename "$file")
+            title=$(grep -oP '(?<=<h2>).*?(?=</h2>)' "$file" | head -n1)
+            preview=$(grep -oP '(?<=<p>).*?(?=</p>)' "$file" | head -n1)
+            if [ "$first" = true ]; then
+              first=false
+            else
+              echo "," >> articles.json
+            fi
+            echo "  {\"title\": \"$title\", \"file\": \"$file\", \"preview\": \"$preview\"}" >> articles.json
+          done
+          echo "]" >> articles.json
+
+      - name: Commit and Push articles.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add articles.json
+          git commit -m "Update articles.json"
+          git push
